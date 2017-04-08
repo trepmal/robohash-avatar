@@ -26,7 +26,7 @@ class RoboHash_Avatar {
 	 */
 	function __construct() {
 		add_filter( 'avatar_defaults' ,      array( $this, 'avatar_defaults' ) );
-		add_filter( 'get_avatar',            array( $this, 'get_avatar' ), 11, 5 );
+		add_filter( 'get_avatar',            array( $this, 'get_avatar' ), 11, 6 );
 		add_action( 'admin_enqueue_scripts', array( $this, 'admin_enqueue_scripts' ) );
 		add_action( 'load-options.php',      array( $this, 'update' ) );
 	}
@@ -34,22 +34,22 @@ class RoboHash_Avatar {
 	/**
 	 * Add RoboHash option to avatar list
 	 *
-	 * @param array $avatar_defaults Avatar defaults.
-	 * @return array Avatar defaults.
+	 * @param array $avatar_defaults All avatar options.
+	 * @return array Avatar options.
 	 */
 	function avatar_defaults( $avatar_defaults ) {
-		// Create the extra avatar option, with options!
-		// JS is used to create a live preview.
+
 		$options = get_option( 'robohash_options', array( 'bot' => 'set1', 'bg' => 'bg1' ) );
 
-		$bots = '<label for="robohash_bot">Body</label> <select id="robohash_bot" name="robohash_bot">';
+		$bots  = 'RoboHash (Generated) ';
+		$bots .= '<label for="robohash_bot">Body</label> <select id="robohash_bot" name="robohash_bot">';
 		$bots .= '<option value="set1"' . selected( $options['bot'], 'set1', false ) . '>Robots</option>';
 		$bots .= '<option value="set2"' . selected( $options['bot'], 'set2', false ) . '>Monsters</option>';
 		$bots .= '<option value="set3"' . selected( $options['bot'], 'set3', false ) . '>Robot Heads</option>';
 		$bots .= '<option value="any" ' . selected( $options['bot'], 'any',  false ) . '>Any</option>';
 		$bots .= '</select> ';
 
-		$bgs = '<label for="robohash_bg">Background</label> <select id="robohash_bg" name="robohash_bg">';
+		$bgs  = '<label for="robohash_bg">Background</label> <select id="robohash_bg" name="robohash_bg">';
 		$bgs .= '<option value=""    ' . selected( $options['bg'], '',    false ) . '>None</option>';
 		$bgs .= '<option value="bg1" ' . selected( $options['bg'], 'bg1', false ) . '>Scene</option>';
 		$bgs .= '<option value="bg2" ' . selected( $options['bg'], 'bg2', false ) . '>Abstract</option>';
@@ -79,14 +79,16 @@ class RoboHash_Avatar {
 	/**
 	 * Filter avatar
 	 *
-	 * @param mixed $avatar      Avatar.
-	 * @param mixed $id_or_email ID or Email.
-	 * @param mixed $size        Size.
-	 * @param mixed $default     Default.
-	 * @param mixed $alt         Alt.
+	 * @param string $avatar      &lt;img&gt; tag for the user's avatar.
+	 * @param mixed  $id_or_email The Gravatar to retrieve. Accepts a user_id, gravatar md5 hash,
+	 *                            user email, WP_User object, WP_Post object, or WP_Comment object.
+	 * @param int    $size        Square avatar width and height in pixels to retrieve.
+	 * @param string $default     URL for the default image or a default type.
+	 * @param string $alt         Alternative text to use in the avatar image tag. Default empty.
+	 * @param array  $args        Arguments passed to get_avatar_data(), after processing.
 	 * @return string HTML
 	 */
-	function get_avatar( $avatar, $id_or_email, $size, $default, $alt ) {
+	function get_avatar( $avatar, $id_or_email, $size, $default, $alt, $args ) {
 
 		// Determine email address.
 		if ( is_numeric( $id_or_email ) ) {
@@ -144,10 +146,12 @@ class RoboHash_Avatar {
 	 * Save options
 	 */
 	function update() {
+		wp_verify_nonce( 'discussion-options' );
+
 		if ( isset( $_POST['robohash_bot'] ) && isset( $_POST['robohash_bg'] ) ) {
 			$options = array(
-				'bot' => esc_attr( wp_unslash( $_POST['robohash_bot'] ) ),
-				'bg'  => esc_attr( wp_unslash( $_POST['robohash_bg'] ) ),
+				'bot' => sanitize_text_field( wp_unslash( $_POST['robohash_bot'] ) ),
+				'bg'  => sanitize_text_field( wp_unslash( $_POST['robohash_bg'] ) ),
 			);
 			update_option( 'robohash_options', $options );
 		}
