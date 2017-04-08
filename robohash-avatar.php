@@ -57,6 +57,7 @@ class RoboHash_Avatar {
 		$bgs .= '</select>';
 
 		$hidden = '<input type="hidden" id="spinner" value="' . admin_url( 'images/wpspin_light-2x.gif' ) . '" />';
+		$nonce = wp_nonce_field( 'robohash-options', 'robohash-nonce', false, false );
 
 		// Current avatar, based on saved options.
 		$avatar_url = str_replace(
@@ -71,7 +72,7 @@ class RoboHash_Avatar {
 			'https://robohash.org/set_set1/bgset_bg1/emailhash.png'
 		);
 
-		$avatar_defaults[ $avatar_url ] = $bots . $bgs . $hidden;
+		$avatar_defaults[ $avatar_url ] = $bots . $bgs . $hidden . $nonce ;
 
 		return $avatar_defaults;
 	}
@@ -146,13 +147,21 @@ class RoboHash_Avatar {
 	 * Save options
 	 */
 	function update() {
-		wp_verify_nonce( 'discussion-options' );
+		if (
+			! isset( $_POST['robohash-nonce'] ) ||
+			! isset( $_POST['robohash_bot'] ) ||
+			! isset( $_POST['robohash_bg'] )
+		) {
+			return;
+		}
 
-		if ( isset( $_POST['robohash_bot'] ) && isset( $_POST['robohash_bg'] ) ) {
-			$options = array(
-				'bot' => sanitize_text_field( wp_unslash( $_POST['robohash_bot'] ) ),
-				'bg'  => sanitize_text_field( wp_unslash( $_POST['robohash_bg'] ) ),
-			);
+		if ( check_admin_referer( 'robohash-options', 'robohash-nonce' ) ) {
+
+			$bot   = sanitize_text_field( wp_unslash( $_POST['robohash_bot'] ) );
+			$bg    = sanitize_text_field( wp_unslash( $_POST['robohash_bg'] ) );
+
+			$options = compact( 'bot', 'bg' );
+
 			update_option( 'robohash_options', $options );
 		}
 	}
