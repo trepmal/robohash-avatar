@@ -91,46 +91,64 @@ class RoboHash_Avatar {
 	 */
 	function get_avatar( $avatar, $id_or_email, $size, $default, $alt, $args ) {
 
+		if ( false === strpos( $default, 'https://robohash.org/' ) ) {
+			return $avatar;
+		}
+
 		// Determine email address.
 		if ( is_numeric( $id_or_email ) ) {
-			$email = get_userdata( $id_or_email )->user_email;
-		} elseif ( is_object( $id_or_email ) ) {
-			$email = $id_or_email->comment_author_email;
-		} else {
+
+			$email = md5( get_userdata( $id_or_email )->user_email );
+
+		} elseif ( is_a( $id_or_email, 'WP_Comment' ) ) {
+
+			$email = md5( $id_or_email->comment_author_email );
+
+		} elseif ( is_a( $id_or_email, 'WP_Post' ) ) {
+
+			$email = md5( get_userdata( $id_or_email->post_author )->user_email );
+
+		} elseif ( is_email( $id_or_email ) ) {
+
+			$email = md5( $id_or_email );
+
+		} elseif ( empty( $id_or_email ) ) {
+
+			$email = md5( 'nobody' );
+
+		} elseif ( preg_match( '#[0-9a-f]{32}#', $id_or_email ) ) {
+
 			$email = $id_or_email;
+
+		} else {
+			// ¯\_(ツ)_/¯
+			return $avatar;
 		}
 
-		// Since we're hooking directly into get_avatar,
-		// we need to make sure another avatar hasn't been selected.
-		if ( strpos( $default, 'https://robohash.org/' ) !== false ) {
-			$email = empty( $email ) ? 'nobody' : md5( $email );
-
-			// In rare cases were there is no email associated with the comment (like Mr WordPress)
-			// we have to work around a bit to insert the custom avatar.
-			$direct = get_option( 'avatar_default' );
-			$new_av_url = str_replace( 'emailhash', $email, $direct );
-			// 'www' version for WP2.9 and older
-			if (
-				0 === strpos( $default, 'http://0.gravatar.com/avatar/' ) ||
-				0 === strpos( $default, 'http://www.gravatar.com/avatar/' )
-			) {
-				$avatar = str_replace( $default, $new_av_url . "&size={$size}x{$size}", $avatar );
-			}
-
-			// Otherwise, just swap the placeholder with the hash.
-			$avatar = str_replace( 'emailhash', $email, $avatar );
-
-			// This is ugly, but has to be done.
-			// Make sure we pass the correct size params to the generated avatar.
-			$avatar = str_replace( '%3F', "%3Fsize={$size}x{$size}%26", $avatar );
-
+		// In rare cases were there is no email associated with the comment (like Mr WordPress)
+		// we have to work around a bit to insert the custom avatar.
+		$direct = get_option( 'avatar_default' );
+		$new_av_url = str_replace( 'emailhash', $email, $direct );
+		// 'www' version for WP2.9 and older
+		if (
+			0 === strpos( $default, 'http://0.gravatar.com/avatar/' ) ||
+			0 === strpos( $default, 'http://www.gravatar.com/avatar/' )
+		) {
+			$avatar = str_replace( $default, $new_av_url . "&size={$size}x{$size}", $avatar );
 		}
+
+		// Otherwise, just swap the placeholder with the hash.
+		$avatar = str_replace( 'emailhash', $email, $avatar );
+
+		// This is ugly, but has to be done.
+		// Make sure we pass the correct size params to the generated avatar.
+		$avatar = str_replace( '%3F', "%3Fsize={$size}x{$size}%26", $avatar );
 
 		return $avatar;
 	}
 
 	/**
-	 * Enqueue js for live avatar upates
+	 * Enqueue js for live avatar updates
 	 *
 	 * @param string $hook Page hook.
 	 */
